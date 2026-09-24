@@ -1,7 +1,23 @@
 # `write` cannot create a new file on volumes without hard-link support (exFAT/FAT32)
 
-## Summary
+## Already reported
 
+This is not a new finding. The defect has been reported before, and those threads
+are where the analysis lives — including the root cause, the `throwGuardedCreateFailure`
+chain, the determination that `EISDIR` originates in Node/libuv rather than in dsh
+(filed upstream as `nodejs/node#65817`), and reference diffs. `#3884` is the
+authoritative report; `#5127` was closed by its own author as a duplicate of it;
+`#5704` is the active thread. See [PRIOR-REPORTS.md](./PRIOR-REPORTS.md) for the list
+and for what each already contains.
+
+What this document adds is measurement on real hardware: the affected volume used
+here is a **fixed (non-removable)** exFAT volume, and the fallback primitive that
+those threads proposed from source reading — `rename` in place of the failed hard
+link — was exercised directly on it, together with the collision case that must
+**not** degrade. Read the earlier threads first; the sections below are
+corroboration, not a new report.
+
+## Summary
 On Windows, the `write` tool cannot create a new file when the workspace sits on
 a volume whose filesystem has no hard links — exFAT and FAT32 (removable drives),
 and some network shares. Updating an existing file, and `edit`, keep working, so
@@ -161,12 +177,6 @@ with an atomic no-clobber primitive that does not need hard links.
 - A second `write` to a file that was created but never read still reports
   `FS_NOT_OBSERVED`.
 - An NTFS volume is unaffected.
-
-## Existing reports
-
-This defect has been reported before; see [PRIOR-REPORTS.md](./PRIOR-REPORTS.md) for
-the list and for the analysis those threads already carry. The material above is
-offered as corroborating evidence on real hardware, not as a new finding.
 
 *(A minimal reproduction needs a filesystem that genuinely lacks hard links: a
 USB stick formatted FAT32/exFAT, or a VHD created and formatted as exFAT in
