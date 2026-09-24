@@ -1,0 +1,9 @@
+# The configuration layer this bundle contributes.
+#
+# One row, no services and no configuration: the plugin registers a single
+# `tools/execute` listener that only ever acts on a write whose publication
+# already failed. A profile lists this bundle by package name, so Node
+# resolution (not a relative path) finds the installed code.
+- insert:
+    - id: hardlink-publish-fallback
+      name: dsh-hardlink-publish-fallback

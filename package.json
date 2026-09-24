@@ -1,0 +1,37 @@
+{
+  "name": "dsh-hardlink-publish-fallback",
+  "version": "0.1.0",
+  "description": "Completes a write-tool file creation that failed because the volume cannot publish new files via hard link (exFAT/FAT/network shares).",
+  "type": "module",
+  "main": "index.js",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "bundle",
+    "exfat",
+    "hardlink"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mushroomcowisheggs/dsh-hardlink-publish-fallback.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Mushroomcowisheggs/dsh-hardlink-publish-fallback/issues"
+  },
+  "homepage": "https://github.com/Mushroomcowisheggs/dsh-hardlink-publish-fallback#readme",
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}
