@@ -4,6 +4,9 @@
   "description": "Completes a write-tool file creation that failed because the volume cannot publish new files via hard link (exFAT/FAT/network shares).",
   "type": "module",
   "main": "index.js",
+  "scripts": {
+    "test": "node test/plugin.test.mjs"
+  },
   "license": "MIT",
   "keywords": [
     "dsh",
@@ -27,7 +30,8 @@
     "index.js",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "test"
   ],
   "dsh": {
     "bundle": {

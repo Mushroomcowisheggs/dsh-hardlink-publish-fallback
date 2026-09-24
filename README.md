@@ -127,6 +127,20 @@ so they behave like any other file afterwards.
   re-check preserves, and a racing creator still cannot be silently overwritten
   beyond that window.
 
+## Testing
+
+```sh
+npm test          # or: node test/plugin.test.mjs
+```
+
+The suite replaces the plugin's seams (`fs`, `sandboxPolicy`) with fakes that
+reproduce the semantics of a hard-link-less volume, so it needs no exFAT volume, no
+running harness, and no dependencies — it runs anywhere Node runs. It asserts the
+outcomes that matter for this plugin's contract: the hard-link failure is completed
+without a no-replace guard, a target that exists by the time the takeover runs is
+**never** overwritten, unrelated failures and successful writes are passed through
+untouched, and a failure inside the takeover leaves the caller's original outcome
+in place.
 ## Repository layout
 
 ```
@@ -136,6 +150,8 @@ so they behave like any other file afterwards.
 ├── index.js               # the plugin module
 ├── README.md
 ├── LICENSE
+├── test/
+│   └── plugin.test.mjs    # behavioural tests (no exFAT volume needed)
 ├── DEFECT-REPORT.md       # the upstream analysis (not published to npm)
 ├── POST.md                # candidate discussion write-up (see PRIOR-REPORTS.md)
 └── PRIOR-REPORTS.md       # this defect is already reported - read before filing
