@@ -24,7 +24,7 @@ no such thing.
 | Node | v22.20.0 |
 | `dsh` | 0.1.5-rc.1 |
 | `@deepseek-ai/dsh-fs-local` | 0.1.5-rc.2 |
-| Workspace volume | a volume formatted exFAT (any non-hard-link filesystem reproduces it) |
+| Workspace volume | a **fixed (non-removable)** volume formatted exFAT; any non-hard-link filesystem reproduces it |
 | Surface | Web profile, `standard`/`cordis` preset, default `workspace-write` sandbox |
 
 ## Symptom
@@ -39,21 +39,6 @@ Error: cannot write "<workspace>\new.txt": EISDIR: illegal operation on a direct
 Deterministic, and true for every new file, in the workspace root and in
 subdirectories alike. Overwriting an existing file in the same workspace reports
 `Updated file`, and `edit` succeeds.
-
-## Isolation of the failing primitive
-
-On the affected volume, with the staged temp file already written, and within a
-single run:
-
-```js
-fs.linkSync(temp, target)     // → code=EISDIR  errno=-4068  syscall=link
-fs.renameSync(temp, target)   // → OK
-```
-
-`mkdir` of the staging directory, `open(tempPath, 'wx')`, `writeFile`, `chmod` and
-`sync` all succeed. Only `link()` is rejected. The same volume also refuses
-symlinks (`fs.symlinkSync` → `EISDIR`), which is a separate limitation with its own
-consequences for `DSH_HOME`.
 
 ## Root cause
 
@@ -87,18 +72,57 @@ Two related observations:
    hard-links for this guard — so it is already compatible with hard-link-less
    volumes. The two publication implementations in the tree disagree on this point.
 
-## Verified on the affected hardware
+## Results on the affected hardware
 
-The `rename` fallback is not merely plausible on the affected filesystem; it has
-been exercised directly on an exFAT volume. The isolation above is that
-verification: `linkSync` fails with `EISDIR` while `renameSync` succeeds against
-the same paths in the same run.
+All results below were produced on the same machine, in one session.
 
-A separate write path was also exercised end to end: a plugin that detects this
-failure signature and completes the operation through the rename publication
-created new files (including in a directory it had to create), left no staging
-residue, and produced files whose contents read back correctly.
+### The publication primitives
 
+With the staged temp file already written, against the same target path, in one run:
+
+```js
+fs.linkSync(temp, target)     // → code=EISDIR  errno=-4068  syscall=link
+fs.renameSync(temp, target)   // → OK, content reads back correctly
+```
+
+`mkdir` of the staging directory, `open(tempPath, 'wx')`, `writeFile`, `chmod` and
+`sync` all succeed in the same run. `fs.renameSync` also succeeds when the target
+lies in a subdirectory that had to be created first. The same volume also refuses
+symlinks (`fs.symlinkSync` → `EISDIR`).
+
+### The fallback semantics
+
+The guarded-create logic — link first, and on a hard-link-unsupported failure fall
+back to `rename` only while the target is still absent — was exercised directly:
+
+| Case | Result |
+|---|---|
+| New file (target absent) | degrades to `rename`, file published, content correct |
+| Concurrent creator (target already present) | **not** degraded; the original failure is raised and the existing content is preserved byte-for-byte |
+| Staging file after a successful fallback | consumed by the publish, no residue |
+
+The collision path is untouched by the fallback: `EEXIST` is deliberately not part
+of the "hard links unsupported" set, so a genuine race still reports contention
+instead of silently overwriting.
+
+### NTFS is unaffected
+
+On an NTFS volume, `fs.linkSync` succeeds and the resulting paths **share an inode**
+— a real hard link, not a copy. So the existing create-if-absent path on NTFS
+keeps behaving exactly as before, and the fallback never engages there.
+
+### What this does not establish
+
+The reference diffs in the existing threads were **not** applied: doing so means
+modifying an installed DSH runtime, which was out of scope here. What is verified
+is that the primitives and the fallback logic those diffs rely on behave as the
+diffs assume on the affected filesystem — not that a patched build passes.
+
+A separate end-to-end check was also run: a plugin that detects this failure
+signature and completes the write through the rename publication created new
+files, including inside a directory it had to create, with no staging residue and
+with contents that read back correctly, while writes that did not match the
+signature were passed through untouched.
 ## A separate defect: drive-root writes
 
 `writeFileAtomic` begins with `mkdir(dirname(absolutePath), { recursive: true })`

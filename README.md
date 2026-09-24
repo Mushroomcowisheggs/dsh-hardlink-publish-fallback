@@ -100,6 +100,12 @@ Then, in a workspace on the affected volume, ask the agent to create a new file.
 Without the plugin it fails with the `EISDIR`/`link` error above; with it the call
 reports `Created file` as normal.
 
+Confirmed on real hardware (fixed exFAT volume, plugin installed from the published
+tag): new-file creation, creation inside a directory that had to be made, a second
+write to the same file without an intervening read, and no staging residue. Files
+this plugin creates record the same observation a normal successful write records,
+so they behave like any other file afterwards.
+
 ## Scope and limitations
 
 - **Only repairs new-file creation.** Updates and `edit` never used the hard-link
